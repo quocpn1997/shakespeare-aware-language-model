@@ -29,6 +29,15 @@ Chunk = Dict[str, Any]
 Scene = Dict[str, Any]
 
 
+_COPYRIGHT_MARKERS = ("COPYRIGHT", "WORLD LIBRARY", "COMMERCIALLY", "MACHINE READABLE")
+
+
+def _is_noise(utt: Dict[str, Any]) -> bool:
+    """Return True if an utterance is dataset boilerplate rather than play content."""
+    text = utt.get("text", "").upper()
+    return any(marker in text for marker in _COPYRIGHT_MARKERS)
+
+
 def _render_utterance(utt: Dict[str, Any]) -> str:
     """
     Render one utterance as a single display line.
@@ -85,6 +94,11 @@ def create_utterance_window_chunks(
         # Slide the window; range() stops before we'd start a chunk with nothing.
         for start in range(0, len(utterances), stride):
             window_utts = utterances[start : start + window]
+
+            # Drop boilerplate (copyright notices embedded in the source data).
+            window_utts = [u for u in window_utts if not _is_noise(u)]
+            if not window_utts:
+                continue
 
             # Render each utterance as a display line.
             lines = [_render_utterance(u) for u in window_utts]
