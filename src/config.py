@@ -26,10 +26,11 @@ PLAY_FILES = {
 
 DEFAULT_TOP_K = 3
 
-# Lightweight embedding model that fits comfortably within MiniLM's 256-token
-# context window, which is why we use utterance-window chunks (~8 utterances)
-# rather than full scenes that would overflow and be silently truncated.
-EMBEDDING_MODEL_NAME = "sentence-transformers/all-MiniLM-L6-v2"
+# Embedding model for encoding chunks and queries into dense vectors.
+# google/embeddinggemma-300m is a Gemma-based decoder model fine-tuned for
+# retrieval. Its larger context window (2048+ tokens) and 300M parameters
+# give better semantic coverage than smaller BERT-based alternatives.
+EMBEDDING_MODEL_NAME = "google/embeddinggemma-300m"
 
 # Local Ollama model used for both the prompt-only baseline and RAG generation.
 OLLAMA_MODEL = "phi4-mini:latest"
