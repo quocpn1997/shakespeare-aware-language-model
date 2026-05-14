@@ -1,125 +1,183 @@
 """
-Minimal RAG chatbot scaffold.
+RAG chatbot: retrieval-augmented generation using phi4-mini via Ollama.
 
-This file deliberately leaves the language-model call as a placeholder.
-Students must connect it to their chosen local model or approved hosted API.
+Pipeline:
+  1. Load (or build) the embedding index from data/processed/.
+  2. For a query, retrieve the top-k most similar utterance-window chunks.
+  3. Build a prompt that injects the retrieved passages as context.
+  4. Call phi4-mini via Ollama to generate a grounded answer.
 
-The starter implementation prints the RAG prompt so that the retrieval and
-prompt construction pipeline can be tested before generation is added.
+Two generation modes:
+  - QA mode (default): grounded factual answers with act/scene citations.
+    Uses prompts/system_prompt.txt. Temperature 0.2 for consistency.
+  - Stylised mode: short Shakespearean-voice creative responses.
+    Uses prompts/stylised_prompt.txt. Temperature 0.7 for creativity.
+
+Stylised mode is triggered when the question type is "stylised_generation"
+or when the query contains keywords like "Shakespearean-style", "in the voice
+of", or "soliloquy".
+
+Public API (used by evaluate.py):
+  rag_answer(query, retriever, top_k, stylised) -> (answer, retrieved_passages)
 """
 
 from __future__ import annotations
 
-import os
-from functools import lru_cache
+import sys
+from pathlib import Path
 from typing import Any, Dict, List, Tuple
 
-from config import DEFAULT_TOP_K, EMBEDDING_MODEL_NAME, PROMPT_DIR
-from data_loader import load_all_plays
-from chunking import create_chunks, format_chunk_for_display
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+
+import ollama
+from config import (
+    DEFAULT_TOP_K,
+    EMBEDDING_MODEL_NAME,
+    INDEX_PATH,
+    CHUNKS_PATH,
+    OLLAMA_MODEL,
+    PROMPT_DIR,
+)
+from chunking import format_chunk_for_display
 from retrieval import EmbeddingRetriever
+from build_index import build_or_load_index
 
 
 Chunk = Dict[str, Any]
-GENERATION_MODEL_NAME = os.getenv("GENERATION_MODEL_NAME", "google/flan-t5-small")
-GENERATION_MAX_INPUT_TOKENS = int(os.getenv("GENERATION_MAX_INPUT_TOKENS", "512"))
-GENERATION_MAX_NEW_TOKENS = int(os.getenv("GENERATION_MAX_NEW_TOKENS", "160"))
+
+# Keywords that signal the user wants a stylised Shakespearean response.
+STYLISED_KEYWORDS = ("shakespearean-style", "in the voice of", "soliloquy", "stylised")
 
 
-def load_system_prompt() -> str:
-    prompt_path = PROMPT_DIR / "system_prompt.txt"
-    return prompt_path.read_text(encoding="utf-8")
+def _load_prompt(filename: str) -> str:
+    """Read a prompt template file from the prompts/ directory."""
+    path = PROMPT_DIR / filename
+    if not path.exists():
+        raise FileNotFoundError(
+            f"Prompt file not found: {path}\n"
+            "Run from the project root so PROMPT_DIR resolves correctly."
+        )
+    return path.read_text(encoding="utf-8").strip()
 
 
-def build_rag_prompt(query: str, retrieved: List[Tuple[Chunk, float]]) -> str:
+def is_stylised(query: str, question_type: str = "") -> bool:
     """
-    Build a prompt for a RAG-based answer.
-    """
-    system_prompt = load_system_prompt()
+    Return True if the query should use the stylised generation prompt.
 
+    Checks the explicit question_type field first (from evaluation JSON),
+    then falls back to keyword detection in the query text.
+    """
+    if question_type == "stylised_generation":
+        return True
+    query_lower = query.lower()
+    return any(kw in query_lower for kw in STYLISED_KEYWORDS)
+
+
+def build_rag_user_block(query: str, retrieved: List[Tuple[Chunk, float]]) -> str:
+    """
+    Build the user-turn block for the RAG prompt.
+
+    The system prompt (grounding rules, citation instructions) is passed
+    separately as the 'system' role in ollama.chat(). This function produces
+    only the context + question portion that goes in the 'user' role.
+    """
     context_blocks = []
     for rank, (chunk, score) in enumerate(retrieved, start=1):
         context_blocks.append(
-            f"[Context {rank} | similarity={score:.4f}]\n"
+            f"[Passage {rank} | similarity={score:.4f}]\n"
             f"{format_chunk_for_display(chunk)}"
         )
 
     context = "\n\n".join(context_blocks)
 
-    prompt = f"""{system_prompt}
-
-Retrieved context:
-{context}
-
-User question:
-{query}
-
-Answer:
-"""
-    return prompt
-
-
-def generate_answer(prompt: str) -> str:
-    """
-    Generate an answer conditioned on the retrieved-context prompt.
-    """
-    tokenizer, model = _load_generation_model()
-    tokenizer.truncation_side = "left"
-    inputs = tokenizer(
-        prompt,
-        return_tensors="pt",
-        truncation=True,
-        max_length=GENERATION_MAX_INPUT_TOKENS,
+    return (
+        f"Retrieved passages:\n\n"
+        f"{context}\n\n"
+        f"Question: {query}"
     )
-    inputs = {key: value.to(model.device) for key, value in inputs.items()}
 
-    output_ids = model.generate(
-        **inputs,
-        max_new_tokens=GENERATION_MAX_NEW_TOKENS,
-        do_sample=False,
-        num_beams=1,
+
+def generate_answer(user_block: str, stylised: bool = False) -> str:
+    """
+    Call phi4-mini via Ollama to generate an answer.
+
+    Loads the appropriate system prompt from prompts/ and passes it as the
+    'system' role so the model knows whether to produce a grounded factual
+    answer or a Shakespearean-style creative response.
+    """
+    prompt_file = "stylised_prompt.txt" if stylised else "system_prompt.txt"
+    system_prompt = _load_prompt(prompt_file)
+
+    # Lower temperature for factual QA (reproducible answers);
+    # higher for stylised (creative variation is desirable).
+    temperature = 0.7 if stylised else 0.2
+
+    response = ollama.chat(
+        model=OLLAMA_MODEL,
+        messages=[
+            {"role": "system", "content": system_prompt},
+            {"role": "user",   "content": user_block},
+        ],
+        options={"temperature": temperature},
     )
-    return tokenizer.decode(output_ids[0], skip_special_tokens=True).strip()
+    return response.message.content.strip()
 
 
-@lru_cache(maxsize=1)
-def _load_generation_model():
-    from transformers import AutoModelForSeq2SeqLM, AutoTokenizer
+def rag_answer(
+    query: str,
+    retriever: EmbeddingRetriever,
+    top_k: int = DEFAULT_TOP_K,
+    question_type: str = "",
+) -> Tuple[str, List[Tuple[Chunk, float]]]:
+    """
+    Full RAG pipeline: retrieve → prompt → generate.
 
-    tokenizer = AutoTokenizer.from_pretrained(GENERATION_MODEL_NAME)
-    model = AutoModelForSeq2SeqLM.from_pretrained(GENERATION_MODEL_NAME)
-    model.eval()
-    return tokenizer, model
+    Returns:
+        answer:    Generated text from phi4-mini.
+        retrieved: List of (chunk, score) pairs used as context.
+
+    This helper is the entry point used by evaluate.py so it doesn't need
+    to duplicate the retrieve → prompt → generate logic.
+    """
+    stylised = is_stylised(query, question_type)
+    retrieved = retriever.retrieve(query, top_k=top_k)
+    user_block = build_rag_user_block(query, retrieved)
+    answer = generate_answer(user_block, stylised=stylised)
+    return answer, retrieved
 
 
 def main() -> None:
-    records = load_all_plays()
-    chunks = create_chunks(records)
-
+    """Interactive RAG chatbot loop."""
+    # Load the cached index (or build it if missing).
     retriever = EmbeddingRetriever(EMBEDDING_MODEL_NAME)
-    retriever.build_index(chunks)
+    build_or_load_index(retriever)
 
-    print("Shakespeare-aware RAG chatbot scaffold.")
+    print("\nShakespeare RAG Chatbot (phi4-mini)")
     print("Type 'quit' to exit.\n")
 
     while True:
         query = input("Question: ").strip()
+        if not query:
+            continue
         if query.lower() in {"quit", "exit"}:
             break
 
+        stylised = is_stylised(query)
         retrieved = retriever.retrieve(query, top_k=DEFAULT_TOP_K)
-        prompt = build_rag_prompt(query, retrieved)
-        answer = generate_answer(prompt)
 
-        print("\nRetrieved evidence:")
+        # Show retrieved evidence so the user can see what grounded the answer.
+        print("\nRetrieved passages:")
         for rank, (chunk, score) in enumerate(retrieved, start=1):
-            print("-" * 80)
-            print(f"Rank {rank} | Score: {score:.4f}")
-            print(format_chunk_for_display(chunk))
+            print(f"  [{rank}] score={score:.4f} | {chunk['chunk_id']}")
+            print(f"       {chunk['text'][:120].strip()!r}")
 
-        print("\nGenerated answer:")
+        user_block = build_rag_user_block(query, retrieved)
+        answer = generate_answer(user_block, stylised=stylised)
+
+        mode = "stylised" if stylised else "QA"
+        print(f"\nAnswer ({mode} mode):")
         print(answer)
-        print("\n")
+        print()
 
 
 if __name__ == "__main__":
