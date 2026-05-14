@@ -7,18 +7,22 @@ Pipeline:
   3. Build a prompt that injects the retrieved passages as context.
   4. Call phi4-mini via Ollama to generate a grounded answer.
 
-Two generation modes:
-  - QA mode (default): grounded factual answers with act/scene citations.
+Three generation modes:
+  - qa (default): grounded factual answers with act/scene citations.
     Uses prompts/system_prompt.txt. Temperature 0.2 for consistency.
-  - Stylised mode: short Shakespearean-voice creative responses.
+  - concept: structured definition of a character, concept, or relationship.
+    Uses prompts/concept_prompt.txt. Temperature 0.2 for consistency.
+  - stylised: short Shakespearean-voice creative responses.
     Uses prompts/stylised_prompt.txt. Temperature 0.7 for creativity.
 
-Stylised mode is triggered when the question type is "stylised_generation"
-or when the query contains keywords like "Shakespearean-style", "in the voice
-of", or "soliloquy".
+Mode is selected by question_type from the evaluation JSON, or by keyword
+detection in the query text when question_type is not provided:
+  - "stylised_generation"  → stylised  (keywords: "soliloquy", "in the voice of", …)
+  - "concept_explanation"  → concept   (keywords: "who is", "what is", …)
+  - "contextual_qa"        → qa        (default)
 
 Public API (used by evaluate.py):
-  rag_answer(query, retriever, top_k, stylised) -> (answer, retrieved_passages)
+  rag_answer(query, retriever, top_k, question_type) -> (answer, retrieved_passages)
 """
 
 from __future__ import annotations
@@ -45,8 +49,16 @@ from build_index import build_or_load_index
 
 Chunk = Dict[str, Any]
 
-# Keywords that signal the user wants a stylised Shakespearean response.
+# Keywords for mode detection when question_type is not supplied explicitly.
 STYLISED_KEYWORDS = ("shakespearean-style", "in the voice of", "soliloquy", "stylised")
+CONCEPT_KEYWORDS  = ("who is", "what is", "what are", "what role", "what does")
+
+# Maps mode name → (prompt file, temperature).
+_MODE_CONFIG: Dict[str, Tuple[str, float]] = {
+    "qa":       ("system_prompt.txt",  0.2),
+    "concept":  ("concept_prompt.txt", 0.2),
+    "stylised": ("stylised_prompt.txt", 0.7),
+}
 
 
 def _load_prompt(filename: str) -> str:
@@ -60,26 +72,36 @@ def _load_prompt(filename: str) -> str:
     return path.read_text(encoding="utf-8").strip()
 
 
-def is_stylised(query: str, question_type: str = "") -> bool:
+def get_mode(query: str, question_type: str = "") -> str:
     """
-    Return True if the query should use the stylised generation prompt.
+    Return the generation mode: 'stylised', 'concept', or 'qa'.
 
     Checks the explicit question_type field first (from evaluation JSON),
     then falls back to keyword detection in the query text.
     """
     if question_type == "stylised_generation":
-        return True
+        return "stylised"
+    if question_type == "concept_explanation":
+        return "concept"
+    if question_type == "contextual_qa":
+        return "qa"
+
+    # Keyword fallback for interactive use (no question_type provided).
     query_lower = query.lower()
-    return any(kw in query_lower for kw in STYLISED_KEYWORDS)
+    if any(kw in query_lower for kw in STYLISED_KEYWORDS):
+        return "stylised"
+    if any(kw in query_lower for kw in CONCEPT_KEYWORDS):
+        return "concept"
+    return "qa"
 
 
 def build_rag_user_block(query: str, retrieved: List[Tuple[Chunk, float]]) -> str:
     """
     Build the user-turn block for the RAG prompt.
 
-    The system prompt (grounding rules, citation instructions) is passed
-    separately as the 'system' role in ollama.chat(). This function produces
-    only the context + question portion that goes in the 'user' role.
+    The system prompt (mode-specific instructions) is passed separately as
+    the 'system' role in ollama.chat(). This function produces only the
+    context + question portion that goes in the 'user' role.
     """
     context_blocks = []
     for rank, (chunk, score) in enumerate(retrieved, start=1):
@@ -100,20 +122,17 @@ def build_rag_user_block(query: str, retrieved: List[Tuple[Chunk, float]]) -> st
     )
 
 
-def generate_answer(user_block: str, stylised: bool = False) -> str:
+def generate_answer(user_block: str, mode: str = "qa") -> str:
     """
     Call phi4-mini via Ollama to generate an answer.
 
-    Loads the appropriate system prompt from prompts/ and passes it as the
-    'system' role so the model knows whether to produce a grounded factual
-    answer or a Shakespearean-style creative response.
+    Selects the system prompt and temperature based on mode:
+      qa       → system_prompt.txt,  temp 0.2 (factual, consistent)
+      concept  → concept_prompt.txt, temp 0.2 (structured definition)
+      stylised → stylised_prompt.txt, temp 0.7 (creative variation)
     """
-    prompt_file = "stylised_prompt.txt" if stylised else "system_prompt.txt"
+    prompt_file, temperature = _MODE_CONFIG.get(mode, _MODE_CONFIG["qa"])
     system_prompt = _load_prompt(prompt_file)
-
-    # Lower temperature for factual QA (reproducible answers);
-    # higher for stylised (creative variation is desirable).
-    temperature = 0.7 if stylised else 0.2
 
     response = ollama.chat(
         model=OLLAMA_MODEL,
@@ -139,19 +158,17 @@ def rag_answer(
         answer:    Generated text from phi4-mini.
         retrieved: List of (chunk, score) pairs used as context.
 
-    This helper is the entry point used by evaluate.py so it doesn't need
-    to duplicate the retrieve → prompt → generate logic.
+    This is the entry point used by evaluate.py.
     """
-    stylised = is_stylised(query, question_type)
+    mode = get_mode(query, question_type)
     retrieved = retriever.retrieve(query, top_k=top_k)
     user_block = build_rag_user_block(query, retrieved)
-    answer = generate_answer(user_block, stylised=stylised)
+    answer = generate_answer(user_block, mode=mode)
     return answer, retrieved
 
 
 def main() -> None:
     """Interactive RAG chatbot loop."""
-    # Load the cached index (or build it if missing).
     retriever = EmbeddingRetriever(EMBEDDING_MODEL_NAME)
     build_or_load_index(retriever)
 
@@ -165,7 +182,7 @@ def main() -> None:
         if query.lower() in {"quit", "exit"}:
             break
 
-        stylised = is_stylised(query)
+        mode = get_mode(query)
         retrieved = retriever.retrieve(query, top_k=DEFAULT_TOP_K)
 
         # Show retrieved evidence so the user can see what grounded the answer.
@@ -175,9 +192,8 @@ def main() -> None:
             print(f"       {chunk['text'][:120].strip()!r}")
 
         user_block = build_rag_user_block(query, retrieved)
-        answer = generate_answer(user_block, stylised=stylised)
+        answer = generate_answer(user_block, mode=mode)
 
-        mode = "stylised" if stylised else "QA"
         print(f"\nAnswer ({mode} mode):")
         print(answer)
         print()
