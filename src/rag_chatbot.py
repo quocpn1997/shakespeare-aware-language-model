@@ -91,9 +91,12 @@ def build_rag_user_block(query: str, retrieved: List[Tuple[Chunk, float]]) -> st
     context = "\n\n".join(context_blocks)
 
     return (
+        f"Question: {query}\n\n"
+        f"Use the following retrieved passages to answer. If the topic appears in any "
+        f"passage, describe what the passages show — a partial answer is always better "
+        f"than refusing.\n\n"
         f"Retrieved passages:\n\n"
-        f"{context}\n\n"
-        f"Question: {query}"
+        f"{context}"
     )
 
 
