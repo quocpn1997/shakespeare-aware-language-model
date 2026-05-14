@@ -1,0 +1,19 @@
+# Python dependencies for the Shakespeare-aware RAG system.
+# Install with: pip install -r requirements.txt
+
+# sentence-transformers provides the MiniLM embedding model used by
+# src/retrieval.py to turn text chunks and queries into vectors.
+# No upper bound: the 2.x → 5.x line is API-compatible for the
+# SentenceTransformer(...).encode(...) call we make, and pinning <3.0
+# would silently downgrade users who already have a newer version.
+sentence-transformers>=2.7.0
+
+# scikit-learn supplies cosine_similarity for the retrieval ranker.
+scikit-learn>=1.3.0
+
+# numpy backs the embedding matrix and the on-disk index (saved as .npz).
+numpy>=1.24.0
+
+# ollama is the local LLM client. Both the baseline and the RAG chatbot
+# call the phi4-mini model hosted by the Ollama daemon at localhost:11434.
+ollama>=0.3.0
