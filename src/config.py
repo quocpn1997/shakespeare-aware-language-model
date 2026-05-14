@@ -27,10 +27,15 @@ PLAY_FILES = {
 DEFAULT_TOP_K = 3
 
 # Embedding model for encoding chunks and queries into dense vectors.
-# google/embeddinggemma-300m is a Gemma-based decoder model fine-tuned for
-# retrieval. Its larger context window (2048+ tokens) and 300M parameters
-# give better semantic coverage than smaller BERT-based alternatives.
-EMBEDDING_MODEL_NAME = "google/embeddinggemma-300m"
+# BAAI/bge-small-en-v1.5 was chosen over larger alternatives because:
+#   - 512-token context fits our utterance-window chunks without truncation
+#   - Zero NaN embeddings (decoder-based models like EmbeddingGemma-300M
+#     produce NaN via mean pooling on ~3% of chunks)
+#   - Benchmarking showed identical top-3 results vs bge-base at half the
+#     build time (5.6s vs 11.8s) on the 633-chunk corpus
+# BGE models require a prefix on queries (not documents) at retrieval time;
+# this is handled in EmbeddingRetriever.retrieve() in retrieval.py.
+EMBEDDING_MODEL_NAME = "BAAI/bge-small-en-v1.5"
 
 # Local Ollama model used for both the prompt-only baseline and RAG generation.
 OLLAMA_MODEL = "phi4-mini:latest"
