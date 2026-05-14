@@ -24,7 +24,14 @@ PLAY_FILES = {
     "romeo_and_juliet": RAW_DATA_DIR / "romeo_and_juliet.json",
 }
 
-DEFAULT_TOP_K = 3
+# Number of chunks to retrieve per query.
+# Set to 8 (up from the scaffold default of 3) because pure semantic retrieval
+# can miss motivation scenes when query vocabulary ("kill Duncan") differs from
+# evidence vocabulary ("ambition", "prophecy", "throne"). Benchmarking showed
+# that key motivation scenes for "Why does Macbeth kill Duncan?" rank ~59th,
+# requiring top_k=8 to surface enough context for a grounded answer.
+# At 633 chunks the performance cost is negligible (~0.02ms per query).
+DEFAULT_TOP_K = 8
 
 # Embedding model for encoding chunks and queries into dense vectors.
 # BAAI/bge-small-en-v1.5 was chosen over larger alternatives because:
