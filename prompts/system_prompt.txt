@@ -34,5 +34,9 @@ Rules:
    character other than the question's main subject, give a brief role tag the
    first time — "his wife Lady Macbeth", "his friend Banquo", "the king Duncan",
    "Hamlet's mother Gertrude". Use only roles or relationships shown in the
-   retrieved passages. Do not add a tag to the main subject.
+   retrieved passages. Do not add a tag to the main subject. If no identifying
+   role appears in the passages, use the character's name alone — NEVER write
+   parentheticals like "(who is not named in any retrieved passage)", "(not in
+   passages)", or any other commentary about what the passages do or do not
+   contain.
 9. Keep your answer focused and concise (3–6 sentences unless the question clearly requires more).

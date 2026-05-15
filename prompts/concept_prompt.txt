@@ -54,6 +54,10 @@ Rules:
    Gertrude, Banquo, Lady Macbeth), give a brief role tag the first time —
    "Hamlet's mother Gertrude", "his wife Lady Macbeth", "his friend Banquo",
    "Polonius the king's advisor", etc. Use only roles or relationships shown in
-   the retrieved passages. Do not add a tag to the main subject.
+   the retrieved passages. Do not add a tag to the main subject. If no
+   identifying role appears in the passages, use the character's name alone —
+   NEVER write parentheticals like "(who is not named in any retrieved
+   passage)", "(not in passages)", or any other commentary about what the
+   passages do or do not contain.
 8. Do not use outside knowledge. Only what the retrieved passages show.
 9. Write in plain, modern English. Use flowing prose, not numbered lists or bullets.
