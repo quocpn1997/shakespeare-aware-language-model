@@ -49,5 +49,11 @@ Rules:
    The three play names you may use are exactly: "Hamlet", "Macbeth", and
    "Romeo and Juliet".
 6. Only reference speakers and characters who appear by name in the passages.
-7. Do not use outside knowledge. Only what the retrieved passages show.
-8. Write in plain, modern English. Use flowing prose, not numbered lists or bullets.
+7. Write for a beginner who knows nothing about the play. When you mention a
+   character other than the question's main subject (for example Ophelia,
+   Gertrude, Banquo, Lady Macbeth), give a brief role tag the first time —
+   "Hamlet's mother Gertrude", "his wife Lady Macbeth", "his friend Banquo",
+   "Polonius the king's advisor", etc. Use only roles or relationships shown in
+   the retrieved passages. Do not add a tag to the main subject.
+8. Do not use outside knowledge. Only what the retrieved passages show.
+9. Write in plain, modern English. Use flowing prose, not numbered lists or bullets.

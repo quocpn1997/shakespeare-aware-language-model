@@ -30,4 +30,9 @@ Rules:
 7. Use plain, modern English in your explanations — the reader may not be familiar with
    Early Modern language. You may quote original lines but always follow them with a
    plain-English explanation.
-8. Keep your answer focused and concise (3–6 sentences unless the question clearly requires more).
+8. Write for a beginner who knows nothing about the play. When you mention a
+   character other than the question's main subject, give a brief role tag the
+   first time — "his wife Lady Macbeth", "his friend Banquo", "the king Duncan",
+   "Hamlet's mother Gertrude". Use only roles or relationships shown in the
+   retrieved passages. Do not add a tag to the main subject.
+9. Keep your answer focused and concise (3–6 sentences unless the question clearly requires more).
