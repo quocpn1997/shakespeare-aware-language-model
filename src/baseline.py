@@ -1,11 +1,11 @@
 """
 Prompt-only baseline system.
 
-The baseline calls phi4-mini via Ollama with NO retrieved context — the model
-answers from its parametric (pre-trained) knowledge alone.
+The baseline calls the configured Ollama model with NO retrieved context — the
+model answers from its parametric (pre-trained) knowledge alone.
 
 Why this design?
-  Using the same LLM (phi4-mini) for both baseline and RAG means any difference
+  Using the same model for both baseline and RAG means any difference
   in evaluation scores directly reflects the contribution of retrieval, not a
   difference in model capability. A weaker LLM or a keyword-search baseline
   would confound the comparison.
@@ -35,7 +35,7 @@ BASELINE_SYSTEM_PROMPT = (
 
 def baseline_answer(query: str) -> str:
     """
-    Generate an answer using phi4-mini with no retrieved context.
+    Generate an answer with no retrieved context.
 
     The model relies entirely on its pre-trained knowledge of Shakespeare.
     This is the comparison point for the RAG system in evaluation.
@@ -46,7 +46,11 @@ def baseline_answer(query: str) -> str:
             {"role": "system", "content": BASELINE_SYSTEM_PROMPT},
             {"role": "user",   "content": query},
         ],
-        options={"temperature": 0.2},  # Low temperature for consistent, factual answers.
+        options={
+            "temperature": 0.2,
+            "num_predict": 250,  # consistent cap with RAG system
+            "num_gpu":     99,   # offload all layers to GPU; no-op on CPU-only systems
+        },
     )
     # Extract the text content from the Ollama response object.
     return response.message.content.strip()

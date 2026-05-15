@@ -29,6 +29,7 @@ from __future__ import annotations
 
 import re
 import sys
+import time
 from pathlib import Path
 from typing import Any, Dict, List, Tuple
 
@@ -275,7 +276,7 @@ def main() -> None:
     retriever = EmbeddingRetriever(EMBEDDING_MODEL_NAME)
     build_or_load_index(retriever)
 
-    print("\nShakespeare RAG Chatbot (phi4-mini)")
+    print(f"\nShakespeare RAG Chatbot ({OLLAMA_MODEL})")
     print("Type 'quit' to exit.\n")
 
     while True:
@@ -297,11 +298,13 @@ def main() -> None:
             print(f"       {chunk['text'][:120].strip()!r}")
 
         user_block = build_rag_user_block(query, retrieved)
+        t0 = time.time()
         answer = generate_answer(user_block, mode=mode)
+        elapsed = time.time() - t0
         if mode != "stylised":
             answer = fix_citations(answer, play_filter)
 
-        print(f"\nAnswer ({mode} mode):")
+        print(f"\nAnswer ({mode} mode) [{elapsed:.1f}s]:")
         print(answer)
         print()
 
