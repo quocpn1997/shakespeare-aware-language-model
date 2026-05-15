@@ -100,6 +100,15 @@ def create_utterance_window_chunks(
             if not window_utts:
                 continue
 
+            # Skip direction-only windows — pure stage directions embed poorly
+            # and surface as false positives for unrelated dialogue queries.
+            has_dialogue = any(
+                u.get("speaker") and u["speaker"] != "STAGE_DIRECTION"
+                for u in window_utts
+            )
+            if not has_dialogue:
+                continue
+
             # Render each utterance as a display line.
             lines = [_render_utterance(u) for u in window_utts]
             chunk_text = scene_header + "\n" + "\n".join(lines)
