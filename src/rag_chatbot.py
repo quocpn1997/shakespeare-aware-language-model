@@ -27,6 +27,7 @@ Public API (used by evaluate.py):
 
 from __future__ import annotations
 
+import re
 import sys
 from pathlib import Path
 from typing import Any, Dict, List, Tuple
@@ -74,6 +75,50 @@ PLAY_KEYWORDS: Dict[str, Tuple[str, ...]] = {
         "verona",
     ),
 }
+
+
+# Patterns for phi4-mini's recurring citation mistakes. Each captures the act
+# and scene numbers separately so we can reassemble in the canonical form
+# "(Play, Act X, Scene Y)" — comma-and-all — regardless of what the model wrote.
+#   1. "(Act 3, Scene 1)" or "(Act 3 Scene 1)"  — paren but missing play, may
+#      also be missing the comma between Act and Scene.
+#   2. "in Act 3, Scene 1," or "In Act 3 Scene 1," — narrative opener instead
+#      of a citation, with or without the comma.
+# The system prompt shows CORRECT/WRONG examples but phi4-mini still drifts as
+# the answer gets longer. Post-processing is more reliable.
+_BARE_PAREN_CITATION_RE = re.compile(
+    r"\(Act\s+(\d+)[,\s]+Scene\s+(\d+)\)", re.IGNORECASE
+)
+_INLINE_CITATION_RE = re.compile(
+    r"(?<![A-Za-z])[Ii]n\s+Act\s+(\d+)[,\s]+Scene\s+(\d+)(?=[,\s.])",
+    re.IGNORECASE,
+)
+
+
+def fix_citations(answer: str, play: str | None) -> str:
+    """
+    Repair citations phi4-mini produces in non-standard formats.
+
+    Transformations (all converge on "(Play, Act X, Scene Y)"):
+      "(Act X, Scene Y)"     → "(Play, Act X, Scene Y)"
+      "(Act X Scene Y)"      → "(Play, Act X, Scene Y)"  ← missing comma fixed
+      "In Act X, Scene Y, …" → "(Play, Act X, Scene Y) …"
+      "in Act X Scene Y …"   → "(Play, Act X, Scene Y) …"
+
+    Only runs when we know which play the answer is about (passed in or
+    auto-detected). If the play is unknown, the answer is returned unchanged.
+    Citations that already include the play name are left alone — the regex
+    only matches strings that start with "Act" or "In Act".
+    """
+    if not play:
+        return answer
+    answer = _BARE_PAREN_CITATION_RE.sub(
+        lambda m: f"({play}, Act {m.group(1)}, Scene {m.group(2)})", answer
+    )
+    answer = _INLINE_CITATION_RE.sub(
+        lambda m: f"({play}, Act {m.group(1)}, Scene {m.group(2)})", answer
+    )
+    return answer
 
 
 def detect_play(query: str) -> str | None:
@@ -220,6 +265,9 @@ def rag_answer(
     retrieved = retriever.retrieve(query, top_k=top_k, play_filter=play_filter)
     user_block = build_rag_user_block(query, retrieved)
     answer = generate_answer(user_block, mode=mode)
+    # Repair any "(Act X, Scene Y)" citations missing the play name.
+    if mode != "stylised":
+        answer = fix_citations(answer, play_filter)
     return answer, retrieved
 
 
@@ -251,6 +299,8 @@ def main() -> None:
 
         user_block = build_rag_user_block(query, retrieved)
         answer = generate_answer(user_block, mode=mode)
+        if mode != "stylised":
+            answer = fix_citations(answer, play_filter)
 
         print(f"\nAnswer ({mode} mode):")
         print(answer)
