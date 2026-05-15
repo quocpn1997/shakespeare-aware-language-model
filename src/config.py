@@ -28,13 +28,9 @@ PLAY_FILES = {
 # Tuned to 5 after empirical testing:
 #   - top_k=3 (scaffold default) misses corroborating evidence for "why/how"
 #     questions where the answer is split across multiple scenes.
-#   - top_k=8 was tried earlier but caused phi4-mini to over-quote and stitch
-#     unrelated passages together, increasing hallucination rate especially in
-#     concept mode ("Who is Hamlet?" pulled in seven scenes and the model
-#     embellished each one with parametric knowledge).
 #   - top_k=5 gives the model enough context for synthesis without
-#     overwhelming its small instruction-following capacity.
-# Performance cost at 633 chunks is negligible (~0.02ms per query either way).
+#     overwhelming the model's instruction-following capacity.
+# Performance cost at 573 chunks is negligible (~0.02ms per query either way).
 DEFAULT_TOP_K = 5
 
 # Embedding model for encoding chunks and queries into dense vectors.
@@ -49,7 +45,7 @@ DEFAULT_TOP_K = 5
 EMBEDDING_MODEL_NAME = "BAAI/bge-small-en-v1.5"
 
 # Local Ollama model used for both the prompt-only baseline and RAG generation.
-OLLAMA_MODEL = "phi4-mini:latest"
+OLLAMA_MODEL = "gemma3:4b"
 
 # Where the built embedding matrix and serialised chunks are saved so that
 # subsequent runs can skip the expensive re-embedding step.

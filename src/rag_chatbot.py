@@ -228,7 +228,6 @@ def generate_answer(user_block: str, mode: str = "qa") -> str:
             {"role": "system", "content": system_prompt},
             {"role": "user",   "content": user_block},
         ],
-        options={"temperature": temperature},
     )
     return response.message.content.strip()
 
