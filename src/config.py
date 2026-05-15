@@ -25,13 +25,17 @@ PLAY_FILES = {
 }
 
 # Number of chunks to retrieve per query.
-# Set to 8 (up from the scaffold default of 3) because pure semantic retrieval
-# can miss motivation scenes when query vocabulary ("kill Duncan") differs from
-# evidence vocabulary ("ambition", "prophecy", "throne"). Benchmarking showed
-# that key motivation scenes for "Why does Macbeth kill Duncan?" rank ~59th,
-# requiring top_k=8 to surface enough context for a grounded answer.
-# At 633 chunks the performance cost is negligible (~0.02ms per query).
-DEFAULT_TOP_K = 8
+# Tuned to 5 after empirical testing:
+#   - top_k=3 (scaffold default) misses corroborating evidence for "why/how"
+#     questions where the answer is split across multiple scenes.
+#   - top_k=8 was tried earlier but caused phi4-mini to over-quote and stitch
+#     unrelated passages together, increasing hallucination rate especially in
+#     concept mode ("Who is Hamlet?" pulled in seven scenes and the model
+#     embellished each one with parametric knowledge).
+#   - top_k=5 gives the model enough context for synthesis without
+#     overwhelming its small instruction-following capacity.
+# Performance cost at 633 chunks is negligible (~0.02ms per query either way).
+DEFAULT_TOP_K = 5
 
 # Embedding model for encoding chunks and queries into dense vectors.
 # BAAI/bge-small-en-v1.5 was chosen over larger alternatives because:
