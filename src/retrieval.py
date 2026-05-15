@@ -77,12 +77,26 @@ class EmbeddingRetriever:
         raw = np.asarray(self.model.encode(texts, show_progress_bar=True))
         self.embeddings = self._normalise(raw)
 
-    def retrieve(self, query: str, top_k: int = 3) -> List[Tuple[Chunk, float]]:
+    def retrieve(
+        self,
+        query: str,
+        top_k: int = 3,
+        play_filter: Optional[str] = None,
+    ) -> List[Tuple[Chunk, float]]:
         """
         Return the top-k most similar chunks for a query.
 
         After L2 normalisation, cosine similarity = dot product, so retrieval
         is a single matrix-vector multiply: embeddings @ query_vec.
+
+        Args:
+            query:       The user question.
+            top_k:       Number of chunks to return.
+            play_filter: If provided, only consider chunks from this play (case-
+                         insensitive match against chunk['play']). Prevents
+                         cross-play contamination when a question is about one
+                         specific play (e.g. R&J questions pulling Macbeth
+                         passages because of weak semantic similarity).
         """
         if self.embeddings is None:
             raise RuntimeError("Index has not been built. Call build_index() first.")
@@ -93,6 +107,15 @@ class EmbeddingRetriever:
 
         # Dot product over normalised vectors = cosine similarity.
         scores = (self.embeddings @ query_vec.T).flatten()
+
+        # Restrict the candidate pool to one play if requested. Setting non-
+        # matching scores to -inf keeps the rest of the code path unchanged.
+        if play_filter:
+            target = play_filter.strip().lower()
+            mask = np.array(
+                [str(c.get("play", "")).strip().lower() == target for c in self.chunks]
+            )
+            scores = np.where(mask, scores, -np.inf)
 
         top_indices = np.argsort(scores)[::-1][:top_k]
         return [(self.chunks[i], float(scores[i])) for i in top_indices]
