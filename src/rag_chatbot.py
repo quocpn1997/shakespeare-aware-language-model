@@ -53,6 +53,50 @@ Chunk = Dict[str, Any]
 STYLISED_KEYWORDS = ("shakespearean-style", "in the voice of", "soliloquy", "stylised")
 CONCEPT_KEYWORDS  = ("who is", "what is", "what are", "what role", "what does")
 
+# Character / place names that uniquely identify each play. Used to filter
+# retrieval to one play and prevent cross-play contamination (e.g. an R&J
+# question that retrieves a Macbeth passage at low similarity). Keys are the
+# canonical play names as stored in chunk['play'].
+PLAY_KEYWORDS: Dict[str, Tuple[str, ...]] = {
+    "Macbeth": (
+        "macbeth", "duncan", "banquo", "macduff", "lady macbeth", "malcolm",
+        "donalbain", "fleance", "hecate", "lennox", "ross", "siward",
+        "dunsinane", "birnam", "cawdor", "glamis", "scone",
+    ),
+    "Hamlet": (
+        "hamlet", "claudius", "gertrude", "ophelia", "polonius", "laertes",
+        "horatio", "rosencrantz", "guildenstern", "fortinbras", "yorick",
+        "denmark", "elsinore",
+    ),
+    "Romeo and Juliet": (
+        "romeo", "juliet", "tybalt", "mercutio", "benvolio", "capulet",
+        "montague", "paris", "rosaline", "friar lawrence", "friar laurence",
+        "verona",
+    ),
+}
+
+
+def detect_play(query: str) -> str | None:
+    """
+    Return the canonical play name if the query clearly refers to one play.
+
+    Counts how many play-specific keywords appear in the query for each play,
+    returns the winner if there is a unique top scorer. Returns None for
+    ambiguous queries (no keywords matched, or a tie) — in that case the
+    caller should retrieve without a play filter.
+    """
+    query_lower = query.lower()
+    scores = {
+        play: sum(1 for kw in keywords if kw in query_lower)
+        for play, keywords in PLAY_KEYWORDS.items()
+    }
+    scores = {p: s for p, s in scores.items() if s > 0}
+    if not scores:
+        return None
+    top_score = max(scores.values())
+    top_plays = [p for p, s in scores.items() if s == top_score]
+    return top_plays[0] if len(top_plays) == 1 else None
+
 # Maps mode name → (prompt file, temperature).
 _MODE_CONFIG: Dict[str, Tuple[str, float]] = {
     "qa":       ("system_prompt.txt",  0.2),
@@ -149,9 +193,21 @@ def rag_answer(
     retriever: EmbeddingRetriever,
     top_k: int = DEFAULT_TOP_K,
     question_type: str = "",
+    play: str | None = None,
 ) -> Tuple[str, List[Tuple[Chunk, float]]]:
     """
     Full RAG pipeline: retrieve → prompt → generate.
+
+    Args:
+        query:         User question text.
+        retriever:     Embedding retriever with a built/loaded index.
+        top_k:         Number of passages to retrieve.
+        question_type: From the evaluation JSON ("contextual_qa" | "concept_explanation"
+                       | "stylised_generation"); selects the generation mode.
+        play:          Canonical play name ("Hamlet" / "Macbeth" / "Romeo and Juliet").
+                       When supplied, retrieval is restricted to that play's chunks.
+                       When omitted, we try to auto-detect the play from character
+                       names in the query, falling back to no filter if unclear.
 
     Returns:
         answer:    Generated text from phi4-mini.
@@ -160,7 +216,8 @@ def rag_answer(
     This is the entry point used by evaluate.py.
     """
     mode = get_mode(query, question_type)
-    retrieved = retriever.retrieve(query, top_k=top_k)
+    play_filter = play if play else detect_play(query)
+    retrieved = retriever.retrieve(query, top_k=top_k, play_filter=play_filter)
     user_block = build_rag_user_block(query, retrieved)
     answer = generate_answer(user_block, mode=mode)
     return answer, retrieved
@@ -182,10 +239,12 @@ def main() -> None:
             break
 
         mode = get_mode(query)
-        retrieved = retriever.retrieve(query, top_k=DEFAULT_TOP_K)
+        play_filter = detect_play(query)
+        retrieved = retriever.retrieve(query, top_k=DEFAULT_TOP_K, play_filter=play_filter)
 
         # Show retrieved evidence so the user can see what grounded the answer.
-        print("\nRetrieved passages:")
+        filter_note = f" [filtered to {play_filter}]" if play_filter else ""
+        print(f"\nRetrieved passages{filter_note}:")
         for rank, (chunk, score) in enumerate(retrieved, start=1):
             print(f"  [{rank}] score={score:.4f} | {chunk['chunk_id']}")
             print(f"       {chunk['text'][:120].strip()!r}")
