@@ -57,7 +57,8 @@ Rules:
    the retrieved passages. Do not add a tag to the main subject. If no
    identifying role appears in the passages, use the character's name alone —
    NEVER write parentheticals like "(who is not named in any retrieved
-   passage)", "(not in passages)", or any other commentary about what the
-   passages do or do not contain.
+   passage)", "(not in passages)", "(not retrieved but mentioned in the scene
+   summary)", or any other commentary about what the passages do or do not
+   contain. Parentheses are for citations only: (Play, Act X, Scene Y).
 8. Do not use outside knowledge. Only what the retrieved passages show.
 9. Write in plain, modern English. Use flowing prose, not numbered lists or bullets.
