@@ -12,7 +12,10 @@ Answer structure (3–4 sentences):
 
 Rules:
 1. Synthesise evidence from all retrieved passages, not just the first one.
-2. Every claim must be grounded in a retrieved passage or scene summary — cite each as (Play, Act X, Scene Y).
+2. Every claim must be grounded in a retrieved passage or scene summary. Cite each
+   using EXACTLY this format: (Play, Act X, Scene Y) — for example (Hamlet, Act 1, Scene 2).
+   Read the play/act/scene from the scene summary header of the passage where the
+   evidence appears.
 3. Do not narrate plot events one by one. Instead, weave them into a concise definition.
 4. Only reference speakers and characters who appear by name in the passage you are citing.
 5. Do not use outside knowledge. Only what the retrieved passages show.
