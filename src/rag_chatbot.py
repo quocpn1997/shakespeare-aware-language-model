@@ -103,14 +103,13 @@ def build_rag_user_block(query: str, retrieved: List[Tuple[Chunk, float]]) -> st
     the 'system' role in ollama.chat(). This function produces only the
     context + question portion that goes in the 'user' role.
     """
-    context_blocks = []
-    for rank, (chunk, score) in enumerate(retrieved, start=1):
-        context_blocks.append(
-            f"[Passage {rank} | similarity={score:.4f}]\n"
-            f"{format_chunk_for_display(chunk)}"
-        )
-
-    context = "\n\n".join(context_blocks)
+    # Note: we intentionally omit "Passage N" labels — phi4-mini was inventing
+    # citations like "(Passage 1)" that pointed to the wrong scene. With only the
+    # Play/Act/Scene header visible inside each chunk, the model is forced to
+    # cite using (Play, Act X, Scene Y), which is the format we want.
+    context = "\n\n---\n\n".join(
+        format_chunk_for_display(chunk) for chunk, _ in retrieved
+    )
 
     return (
         f"Question: {query}\n\n"
