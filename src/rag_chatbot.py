@@ -44,6 +44,7 @@ from config import (
     OLLAMA_MODEL,
     PROMPT_DIR,
 )
+from baseline import baseline_answer
 from chunking import format_chunk_for_display
 from retrieval import EmbeddingRetriever
 from build_index import build_or_load_index
@@ -272,41 +273,61 @@ def rag_answer(
 
 
 def main() -> None:
-    """Interactive RAG chatbot loop."""
+    """Interactive RAG chatbot loop with /rag and /baseline toggle."""
     retriever = EmbeddingRetriever(EMBEDDING_MODEL_NAME)
     build_or_load_index(retriever)
 
+    system_mode = "rag"  # current system: "rag" or "baseline"
+
     print(f"\nShakespeare RAG Chatbot ({OLLAMA_MODEL})")
-    print("Type 'quit' to exit.\n")
+    print("Commands: /rag  /baseline  /quit")
+    print(f"Current mode: {system_mode}\n")
 
     while True:
-        query = input("Question: ").strip()
+        query = input(f"[{system_mode}] Question: ").strip()
         if not query:
             continue
-        if query.lower() in {"quit", "exit"}:
+        if query.lower() in {"quit", "exit", "/quit"}:
             break
 
-        mode = get_mode(query)
-        play_filter = detect_play(query)
-        retrieved = retriever.retrieve(query, top_k=DEFAULT_TOP_K, play_filter=play_filter)
+        # Toggle commands.
+        if query.lower() == "/rag":
+            system_mode = "rag"
+            print(f"Switched to RAG mode.\n")
+            continue
+        if query.lower() == "/baseline":
+            system_mode = "baseline"
+            print(f"Switched to baseline mode.\n")
+            continue
 
-        # Show retrieved evidence so the user can see what grounded the answer.
-        filter_note = f" [filtered to {play_filter}]" if play_filter else ""
-        print(f"\nRetrieved passages{filter_note}:")
-        for rank, (chunk, score) in enumerate(retrieved, start=1):
-            print(f"  [{rank}] score={score:.4f} | {chunk['chunk_id']}")
-            print(f"       {chunk['text'][:120].strip()!r}")
+        if system_mode == "baseline":
+            t0 = time.time()
+            answer = baseline_answer(query)
+            elapsed = time.time() - t0
+            print(f"\nAnswer (baseline) [{elapsed:.1f}s]:")
+            print(answer)
+            print()
+        else:
+            mode = get_mode(query)
+            play_filter = detect_play(query)
+            retrieved = retriever.retrieve(query, top_k=DEFAULT_TOP_K, play_filter=play_filter)
 
-        user_block = build_rag_user_block(query, retrieved)
-        t0 = time.time()
-        answer = generate_answer(user_block, mode=mode)
-        elapsed = time.time() - t0
-        if mode != "stylised":
-            answer = fix_citations(answer, play_filter)
+            filter_note = f" [filtered to {play_filter}]" if play_filter else ""
+            print(f"\nRetrieved passages{filter_note}:")
+            for rank, (chunk, score) in enumerate(retrieved, start=1):
+                print(f"  [{rank}] score={score:.4f} | {chunk['chunk_id']}")
+                print(f"       {chunk['text'][:120].strip()!r}")
 
-        print(f"\nAnswer ({mode} mode) [{elapsed:.1f}s]:")
-        print(answer)
-        print()
+            user_block = build_rag_user_block(query, retrieved)
+            t0 = time.time()
+            answer = generate_answer(user_block, mode=mode)
+            elapsed = time.time() - t0
+            if mode != "stylised":
+                answer = fix_citations(answer, play_filter)
+
+            print(f"\nAnswer ({mode} mode) [{elapsed:.1f}s]:")
+            print(answer)
+            print()
 
 
 if __name__ == "__main__":
