@@ -42,4 +42,8 @@ Rules:
    passages)", "(not retrieved but mentioned in the scene summary)", or any
    other commentary about what the passages do or do not contain. Parentheses
    are for citations only: (Play, Act X, Scene Y).
-9. Keep your answer focused and concise (3–6 sentences unless the question clearly requires more).
+9. Keep your answer focused and concise. Hard limit: 150 words maximum. Stop
+   writing as soon as you have made your key point — do not pad or repeat.
+   Your final sentence MUST be in your own plain-English words — never end
+   with a direct quotation. Always follow your last quote with at least one
+   sentence of explanation before stopping.

@@ -95,6 +95,23 @@ _INLINE_CITATION_RE = re.compile(
     r"(?<![A-Za-z])[Ii]n\s+Act\s+(\d+)[,\s]+Scene\s+(\d+)(?=[,\s.])",
     re.IGNORECASE,
 )
+# gemma3:4b sometimes wraps citations in double parentheses: ( (Play, Act X, Scene Y) )
+_DOUBLE_PAREN_RE = re.compile(r"\(\s*(\([^)]+\))\s*\)")
+
+
+def _truncate_to_words(text: str, max_words: int = 150) -> str:
+    """
+    Hard-truncate at the last complete sentence before max_words words.
+    Used as a backstop when the model ignores the prompt's word-count rule.
+    Stylised answers are exempt — they are short verse, not prose.
+    """
+    words = text.split()
+    if len(words) <= max_words:
+        return text
+    truncated = " ".join(words[:max_words])
+    # Find the last sentence boundary so we don't cut mid-sentence.
+    last_end = max(truncated.rfind("."), truncated.rfind("!"), truncated.rfind("?"))
+    return truncated[:last_end + 1] if last_end > 0 else truncated
 
 
 def fix_citations(answer: str, play: str | None) -> str:
@@ -114,6 +131,8 @@ def fix_citations(answer: str, play: str | None) -> str:
     """
     if not play:
         return answer
+    # Collapse double parens before other substitutions so inner citations are visible.
+    answer = _DOUBLE_PAREN_RE.sub(r"\1", answer)
     answer = _BARE_PAREN_CITATION_RE.sub(
         lambda m: f"({play}, Act {m.group(1)}, Scene {m.group(2)})", answer
     )
@@ -230,6 +249,11 @@ def generate_answer(user_block: str, mode: str = "qa") -> str:
             {"role": "system", "content": system_prompt},
             {"role": "user",   "content": user_block},
         ],
+        options={
+            "temperature": temperature,
+            "num_predict": 250,  # extra headroom to finish the last sentence; _truncate_to_words() enforces 150 words
+            "num_gpu":     99,   # offload all layers to GPU (Metal on Apple Silicon); no-op on CPU-only
+        },
     )
     return response.message.content.strip()
 
@@ -282,9 +306,9 @@ def rag_answer(
 
     user_block = build_rag_user_block(query, retrieved)
     answer = generate_answer(user_block, mode=mode)
-    # Repair any "(Act X, Scene Y)" citations missing the play name.
     if mode != "stylised":
         answer = fix_citations(answer, play_filter)
+        answer = _truncate_to_words(answer, max_words=150)
     return answer, retrieved
 
 
