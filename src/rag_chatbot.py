@@ -261,9 +261,25 @@ def rag_answer(
 
     This is the entry point used by evaluate.py.
     """
+    # Minimum cosine similarity for the top retrieved chunk to be considered
+    # relevant. Below this threshold the corpus contains nothing about the
+    # topic and we return a "not found" response without calling the LLM.
+    # Calibrated on the corpus: on-topic queries score ≥0.64, off-topic ≤0.51.
+    MIN_RELEVANCE_SCORE = 0.58
+
     mode = get_mode(query, question_type)
     play_filter = play if play else detect_play(query)
     retrieved = retriever.retrieve(query, top_k=top_k, play_filter=play_filter)
+
+    top_score = retrieved[0][1] if retrieved else 0.0
+    if top_score < MIN_RELEVANCE_SCORE:
+        not_found = (
+            "I could not find relevant information about that topic in the "
+            "Shakespeare passages I have access to (Hamlet, Macbeth, and "
+            "Romeo and Juliet)."
+        )
+        return not_found, retrieved
+
     user_block = build_rag_user_block(query, retrieved)
     answer = generate_answer(user_block, mode=mode)
     # Repair any "(Act X, Scene Y)" citations missing the play name.
@@ -308,22 +324,19 @@ def main() -> None:
             print(answer)
             print()
         else:
-            mode = get_mode(query)
             play_filter = detect_play(query)
-            retrieved = retriever.retrieve(query, top_k=DEFAULT_TOP_K, play_filter=play_filter)
+            mode = get_mode(query)
+
+            # Route through rag_answer() so the relevance threshold is enforced.
+            t0 = time.time()
+            answer, retrieved = rag_answer(query, retriever, top_k=DEFAULT_TOP_K)
+            elapsed = time.time() - t0
 
             filter_note = f" [filtered to {play_filter}]" if play_filter else ""
             print(f"\nRetrieved passages{filter_note}:")
             for rank, (chunk, score) in enumerate(retrieved, start=1):
                 print(f"  [{rank}] score={score:.4f} | {chunk['chunk_id']}")
                 print(f"       {chunk['text'][:120].strip()!r}")
-
-            user_block = build_rag_user_block(query, retrieved)
-            t0 = time.time()
-            answer = generate_answer(user_block, mode=mode)
-            elapsed = time.time() - t0
-            if mode != "stylised":
-                answer = fix_citations(answer, play_filter)
 
             print(f"\nAnswer ({mode} mode) [{elapsed:.1f}s]:")
             print(answer)
