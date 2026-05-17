@@ -1,32 +1,56 @@
 [
   {
-    "question_id": "Q1",
+    "question_id": "IQ1",
     "question": "Why does Macbeth kill Duncan?",
-    "expected_focus": "Ambition, prophecy, Lady Macbeth's influence, and Macbeth's decision to seize power.",
-    "type": "contextual_qa"
+    "question_type": "contextual_qa",
+    "expected_focus": "Macbeth's ambition, the witches' prophecy, Duncan as an obstacle, and Lady Macbeth's pressure; useful evidence comes from Acts 1–2."
   },
   {
-    "question_id": "Q2",
-    "question": "Who is Hamlet?",
-    "expected_focus": "Prince of Denmark, son of the murdered king, central figure in revenge plot.",
-    "type": "concept_explanation"
+    "question_id": "IQ2",
+    "question": "How does Macbeth change after becoming king?",
+    "question_type": "contextual_qa",
+    "expected_focus": "He becomes increasingly fearful, violent, paranoid, and tyrannical; relevant evidence includes Banquo's murder, the banquet scene, and later acts."
   },
   {
-    "question_id": "Q3",
-    "question": "What is the conflict between the Montagues and the Capulets?",
-    "expected_focus": "Long-standing family feud in Romeo and Juliet.",
-    "type": "concept_explanation"
-  },
-  {
-    "question_id": "Q4",
+    "question_id": "IQ3",
     "question": "Why does Hamlet delay taking revenge?",
-    "expected_focus": "Uncertainty, moral hesitation, need for proof, philosophical reflection.",
-    "type": "contextual_qa"
+    "question_type": "contextual_qa",
+    "expected_focus": "Uncertainty, moral hesitation, need to test Claudius's guilt, and reflective temperament; evidence from the ghost scene, the play-within-a-play, and the prayer scene."
   },
   {
-    "question_id": "Q5",
+    "question_id": "IQ4",
+    "question": "What is Ophelia's role in the tragedy?",
+    "question_type": "concept_explanation",
+    "expected_focus": "Ophelia is caught between Hamlet, Polonius, Laertes, and court politics; her distress and death reveal the human cost of revenge and manipulation."
+  },
+  {
+    "question_id": "IQ5",
+    "question": "Why is Juliet conflicted after Romeo kills Tybalt?",
+    "question_type": "contextual_qa",
+    "expected_focus": "Juliet loves Romeo but Tybalt is her kinsman; she must reconcile romantic loyalty with family loyalty."
+  },
+  {
+    "question_id": "IQ6",
+    "question": "How does the family feud shape the tragedy?",
+    "question_type": "contextual_qa",
+    "expected_focus": "The feud creates violence, secrecy, pressure, miscommunication, and ultimately the conditions for the lovers' deaths."
+  },
+  {
+    "question_id": "IQ7",
+    "question": "Who is Hamlet?",
+    "question_type": "concept_explanation",
+    "expected_focus": "Prince of Denmark, son of the murdered king, central figure in the revenge plot against Claudius."
+  },
+  {
+    "question_id": "IQ8",
+    "question": "What is the conflict between the Montagues and the Capulets?",
+    "question_type": "concept_explanation",
+    "expected_focus": "Long-standing family feud in Romeo and Juliet that drives the violence, forces the lovers into secrecy, and ultimately causes their deaths."
+  },
+  {
+    "question_id": "IQ9",
     "question": "Generate a short Shakespearean-style response from Juliet explaining her conflict after meeting Romeo.",
-    "expected_focus": "Creative stylised output; conflict between love for Romeo and family loyalty.",
-    "type": "stylised_generation"
+    "question_type": "stylised_generation",
+    "expected_focus": "Creative Early Modern English verse from Juliet's perspective; captures the conflict between her love for Romeo and loyalty to her family name."
   }
 ]
