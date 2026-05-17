@@ -1,0 +1,92 @@
+[
+  {
+    "question_id": "DQ1",
+    "question": "Why does Hamlet delay taking revenge on Claudius?",
+    "question_type": "contextual_qa",
+    "expected_focus": "Hamlet's delay stems from moral hesitation, need for proof of guilt, philosophical reflection on action and death, and fear of consequences; the Mousetrap play is his attempt to confirm Claudius's guilt before acting."
+  },
+  {
+    "question_id": "DQ2",
+    "question": "Why does Macbeth kill Banquo after becoming king?",
+    "question_type": "contextual_qa",
+    "expected_focus": "Macbeth fears Banquo because the witches prophesied that Banquo's descendants, not Macbeth's, will be kings; he sees Banquo's wisdom and suspicion as a threat to his reign and orders his murder along with Fleance's."
+  },
+  {
+    "question_id": "DQ3",
+    "question": "Why is Juliet conflicted after Romeo kills Tybalt?",
+    "question_type": "contextual_qa",
+    "expected_focus": "Juliet loves Romeo as her husband but Tybalt is her cousin; she must choose between loyalty to her family and loyalty to her husband, and ultimately sides with Romeo despite her grief."
+  },
+  {
+    "question_id": "DQ4",
+    "question": "Who is Ophelia and what is her role in Hamlet?",
+    "question_type": "concept_explanation",
+    "expected_focus": "Ophelia is a young noblewoman in love with Hamlet; she is manipulated by her father Polonius and the court, rejected by Hamlet, and descends into madness after Polonius is killed, ultimately drowning — her fate illustrates the human cost of the court's corruption."
+  },
+  {
+    "question_id": "DQ5",
+    "question": "Who are the three witches and what role do they play in Macbeth?",
+    "question_type": "concept_explanation",
+    "expected_focus": "The three witches are supernatural figures who open the play by prophesying that Macbeth will become king; their ambiguous prophecies plant the seed of ambition, and Macbeth consults them again in Act 4 for false reassurance that drives his downfall."
+  },
+  {
+    "question_id": "DQ6",
+    "question": "What role does Friar Lawrence play in Romeo and Juliet?",
+    "question_type": "concept_explanation",
+    "expected_focus": "Friar Lawrence secretly marries Romeo and Juliet hoping to end the family feud; he devises the sleeping-potion plan to reunite them, but a failed message to Romeo causes the plan to collapse and contributes directly to both lovers' deaths."
+  },
+  {
+    "question_id": "DQ7",
+    "question": "Write a short Shakespearean-style soliloquy from Hamlet as he contemplates whether to take revenge.",
+    "question_type": "stylised_generation",
+    "expected_focus": "Creative Early Modern English verse from Hamlet's perspective; captures his moral paralysis, doubt about the ghost's honesty, and fear of damnation if he acts wrongly."
+  },
+  {
+    "question_id": "DQ8",
+    "question": "Write a short Shakespearean-style soliloquy from Macbeth as he hesitates before killing Duncan.",
+    "question_type": "stylised_generation",
+    "expected_focus": "Creative Early Modern English verse from Macbeth's perspective; captures his ambition, moral hesitation, and fear of consequences — both worldly and divine."
+  },
+  {
+    "question_id": "DQ9",
+    "question": "Write a short Shakespearean-style response from Romeo as he sees Juliet for the first time.",
+    "question_type": "stylised_generation",
+    "expected_focus": "Creative Early Modern English verse from Romeo's perspective; expresses wonder, immediate love, and contrast between Juliet's radiant beauty and the darkness of the world around him."
+  },
+  {
+    "question_id": "DQ10",
+    "question": "Who was William Shakespeare?",
+    "question_type": "general_knowledge",
+    "expected_focus": "Shakespeare was an English playwright and poet from the late 16th and early 17th century; the system's corpus covers only three plays and contains no biographical passages, so the system is expected to decline or give a limited answer."
+  },
+  {
+    "question_id": "DQ11",
+    "question": "What are the common themes in Shakespeare's tragedies?",
+    "question_type": "general_knowledge",
+    "expected_focus": "Common Shakespearean tragedy themes include ambition, revenge, fate, betrayal, and the corrupting influence of power; the system may draw partial evidence from the three plays in the corpus but cannot give a fully general answer."
+  },
+  {
+    "question_id": "DQ12",
+    "question": "What is a soliloquy and how does Shakespeare use it?",
+    "question_type": "general_knowledge",
+    "expected_focus": "A soliloquy is a speech in which a character thinks aloud alone on stage, revealing inner thoughts to the audience; Shakespeare uses it to expose hidden motivation — examples include Hamlet's 'To be or not to be' and Macbeth's dagger speech."
+  },
+  {
+    "question_id": "DQ13",
+    "question": "What is the capital city of France?",
+    "question_type": "off_topic",
+    "expected_focus": "System should reject this query — geography question with no connection to Hamlet, Macbeth, or Romeo and Juliet."
+  },
+  {
+    "question_id": "DQ14",
+    "question": "How does photosynthesis work in plants?",
+    "question_type": "off_topic",
+    "expected_focus": "System should reject this query — biology question completely outside the Shakespeare corpus."
+  },
+  {
+    "question_id": "DQ15",
+    "question": "Explain the difference between machine learning and deep learning.",
+    "question_type": "off_topic",
+    "expected_focus": "System should reject this query — computer science question completely outside the Shakespeare corpus."
+  }
+]
